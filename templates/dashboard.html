@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPICK INDIA Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #5fcfff, #7beffe);
+            color: #000;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            background-color: rgba(255, 126, 95, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .section h2 {
+            margin-top: 0;
+            color: #7bccfe;
+        }
+
+        .tableau-container {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>TRIPICK INDIA Dashboard</h1>
+    </header>
+    <div class="content">
+        <!-- Tableau Dashboard -->
+        <div class="tableau-container">
+            <h2>Explore Cities</h2>
+            <div id='tableauViz' style="width: 100%; height: 800px;"></div>
+        </div>
+
+        <!-- Weather Section -->
+        <div class="section" id="weather">
+            <h2>Weather Information</h2>
+            <p id="weather-info">Click on a city in the map to see real-time weather updates here.</p>
+        </div>
+
+        <!-- News Section -->
+        <div class="section" id="news">
+            <h2>Latest News</h2>
+            <p id="news-info">Click on a city in the map to see the latest news here.</p>
+        </div>
+
+        <!-- Flight Pricing Section -->
+        <div class="section" id="flights">
+            <h2>Flight Pricing</h2>
+            <p id="flight-info">Click on a city in the map to see real-time flight pricing here.</p>
+        </div>
+    </div>
+
+    <!-- Tableau and Custom Script -->
+    <script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableau-2.min.js"></script>
+    <script type="text/javascript">
+        let viz; // Global reference to Tableau Viz
+
+        function handleCityClick(city) {
+            console.log("City clicked:", city); // Debugging
+
+            // Fetch data from backend for the selected city
+            fetch(`/get_city_data?city=${encodeURIComponent(city)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update Weather Section
+                    document.getElementById("weather-info").textContent = data.weather;
+
+                    // Update News Section
+                    document.getElementById("news-info").textContent = data.news;
+
+                    // Update Flight Pricing Section
+                    document.getElementById("flight-info").textContent = data.flights;
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                });
+        }
+
+        function initializeTableauViz() {
+            const containerDiv = document.getElementById("tableauViz");
+            const url = "https://public.tableau.com/views/TRIPICKINDIAF/TRIPICKINDIA";
+
+            const options = {
+                hideTabs: true,
+                onFirstInteractive: function () {
+                    console.log("Tableau Dashboard Loaded.");
+
+                    // Event listener for marks selection
+                    viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION, function (event) {
+                        event.getMarksAsync().then(function (marks) {
+                            if (marks.length > 0) {
+                                // Extract city name (correct column) instead of city rating
+                                const pairs = marks[0].getPairs();
+                                const cityField = pairs.find(pair => pair.fieldName.includes("City")); // Correct field selection
+                                if (cityField) {
+                                    const city = cityField.formattedValue;
+                                    handleCityClick(city);
+                                } else {
+                                    console.error("City field not found in selected marks.");
+                                }
+                            }
+                        });
+                    });
+                }
+            };
+
+            // Initialize Tableau Viz
+            viz = new tableau.Viz(containerDiv, url, options);
+        }
+
+        // Load Tableau Dashboard on DOM content load
+        document.addEventListener("DOMContentLoaded", initializeTableauViz);
+    </script>
+</body>
+</html>
